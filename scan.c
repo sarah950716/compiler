@@ -4,7 +4,7 @@
 /* Compiler Construction: Principles and Practice   */
 /* Kenneth C. Louden                                */
 /****************************************************/
-
+	
 #include "globals.h"
 #include "util.h"
 #include "scan.h"
@@ -86,6 +86,8 @@ TokenType getToken(void)
    StateType state = START;
    /* flag to indicate save to tokenString */
    int save;
+	 int nextc;
+
    while (state != DONE)
    { int c = getNextChar();
      save = TRUE;
@@ -95,23 +97,20 @@ TokenType getToken(void)
            state = INNUM;
          else if (isalpha(c))
            state = INID;
-         else if (c == ':')
+         else if (c == '=')
            state = INEQ;
          else if ((c == ' ') || (c == '\t') || (c == '\n'))
            save = FALSE;
-         else if (c == '{')
-         { save = FALSE;
-           state = INCOMMENT;
-         }
-         else
+         else if (c == '/')
+				 { save = FALSE;
+         	 state = INOVER;
+				 }
+				 else
          { state = DONE;
            switch (c)
            { case EOF:
                save = FALSE;
                currentToken = ENDFILE;
-               break;
-             case '=':
-               currentToken = EQ;
                break;
              case '<':
                currentToken = LT;
@@ -146,6 +145,9 @@ TokenType getToken(void)
              case ';':
                currentToken = SEMI;
                break;
+						 case ',':
+								currentToken = COMMA;
+								break;
              default:
                currentToken = ERROR;
                break;
@@ -158,19 +160,39 @@ TokenType getToken(void)
          { state = DONE;
            currentToken = ENDFILE;
          }
-         else if (c == '}') state = START;
-         break;
+         else if (c == '*') 
+				   state = INCOMMENT_; 
+				 break;
+			 case INCOMMENT_:
+			 	 save = FALSE;
+				 if (c == EOF)
+				 { state = DONE;
+			 		 currentToken = ENDFILE;
+				 }
+				 else if (c == '/') 
+				   state = START;
+				 else 
+					 state = INCOMMENT;
+				 break;
        case INEQ:
          state = DONE;
-         if (c == '=')
+				 if(c == '=') 
+				 	 currentToken = EQ;
+         else 
            currentToken = ASSIGN;
-         else
-         { /* backup in the input */
-           ungetNextChar();
-           save = FALSE;
-           currentToken = ERROR;
-         }
          break;
+			 case INOVER:
+				 if (c == '*') 
+				 { save = FALSE;
+					 state = INCOMMENT;
+				 }
+				 else 
+				 {
+				 		ungetNextChar();
+						state = DONE;
+				 		currentToken = OVER;
+				 }
+				 break;
        case INNUM:
          if (!isdigit(c))
          { /* backup in the input */
@@ -202,7 +224,7 @@ TokenType getToken(void)
      { tokenString[tokenStringIndex] = '\0';
        if (currentToken == ID)
          currentToken = reservedLookup(tokenString);
-     }
+		 }
    }
    if (TraceScan) {
      fprintf(listing,"\t%d: ",lineno);
